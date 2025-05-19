@@ -1,32 +1,37 @@
 import requests
 
-def obter_ultimos_resultados_lotomania(quantidade=25):
+def obter_ultimos_concursos(quantidade=25):
+    """
+    Coleta os últimos `quantidade` concursos da Lotomania.
+    Retorna uma lista de listas com 20 dezenas sorteadas em cada concurso (como inteiros).
+    """
     url_ultimo = 'https://loteriascaixa-api.herokuapp.com/api/lotomania/latest'
     try:
-        resposta = requests.get(url_ultimo)
+        resposta = requests.get(url_ultimo, timeout=10)
         resposta.raise_for_status()
-        ultimo_concurso = resposta.json()['concurso']
+        ultimo_concurso = resposta.json().get('concurso')
+        if not ultimo_concurso:
+            print("❌ Erro: campo 'concurso' não encontrado na resposta.")
+            return []
     except requests.exceptions.RequestException as e:
-        print(f"Erro ao obter o último concurso: {e}")
+        print(f"❌ Erro ao obter o último concurso: {e}")
         return []
 
     resultados = []
     for numero in range(ultimo_concurso, ultimo_concurso - quantidade, -1):
         url = f'https://loteriascaixa-api.herokuapp.com/api/lotomania/{numero}'
         try:
-            resposta = requests.get(url)
+            resposta = requests.get(url, timeout=10)
             resposta.raise_for_status()
             dados = resposta.json()
-            resultados.append(dados)
+            dezenas = dados.get("dezenas", [])
+            if dezenas and len(dezenas) == 20:
+                dezenas_numeros = sorted([int(d) for d in dezenas])
+                resultados.append(dezenas_numeros)
+            else:
+                print(f"⚠️ Concurso {numero} com dezenas inválidas: {dezenas}")
         except requests.exceptions.RequestException as e:
-            print(f"Erro ao obter o concurso {numero}: {e}")
+            print(f"⚠️ Erro ao obter o concurso {numero}: {e}")
             continue
 
     return resultados
-
-# Exemplo de uso:
-# resultados = obter_ultimos_resultados_lotomania()
-# for resultado in resultados:
-#     print(f"Concurso {resultado['concurso']} - Data: {resultado['data']}")
-#     print(f"Dezenas: {resultado['dezenas']}")
-#     print("-" * 40)
